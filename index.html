@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TOP UP MADA | Store E-Sport Professionnel</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root[data-theme="dark"] {
+            --bg: #070b14; --card: #111827; --text: #ffffff; --text-muted: #94a3b8;
+            --border: rgba(255,255,255,0.08); --glass: rgba(255,255,255,0.04);
+            --input-bg: #111827; --overlay-bg: rgba(7, 11, 20, 0.7);
+            --offer-card-bg: rgba(26, 29, 38, 0.8); --offer-btn-bg: #ffffff; --offer-btn-text: #000000;
+        }
+        :root[data-theme="light"] {
+            --bg: #ffffff; --card: #f8fafc; --text: #0f172a; --text-muted: #64748b;
+            --border: rgba(0,0,0,0.08); --glass: rgba(0,0,0,0.03);
+            --input-bg: #f1f5f9; --overlay-bg: rgba(255, 255, 255, 0.8);
+            --offer-card-bg: rgba(255, 255, 255, 0.9); --offer-btn-bg: #0f172a; --offer-btn-text: #ffffff;
+        }
+        :root { --accent: #00f5ff; --accent-2: #7c3aed; --danger: #ff3b5c; --success: #00ff99; --orange: #ff7900; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); background-image: url('plan.jpg'); background-size: cover; background-position: center; background-attachment: fixed; color: var(--text); min-height: 100vh; overflow-x: hidden; transition: 0.3s; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay-bg); z-index: -1; }
+
+        header { position: sticky; top: 0; z-index: 1000; background: var(--bg); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0.8rem 5%; display: flex; justify-content: space-between; align-items: center; }
+        
+        .window { position: relative; width: 100%; min-height: 100vh; padding: 20px 5% 40px; display: none; opacity: 0; transform: translateY(20px); transition: 0.4s ease; }
+        .win-active { display: block; opacity: 1; transform: translateY(0); }
+
+        .game-grid { display: grid; gap: 15px; grid-template-columns: repeat(2, 1fr); max-width: 1200px; margin: 0 auto; }
+        @media (min-width: 768px) { .game-grid { grid-template-columns: repeat(4, 1fr); } }
+
+        @keyframes pulse-cart { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.7); } 70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(0, 245, 255, 0); } 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 245, 255, 0); } }
+        @keyframes pulse-notif { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        .game-card { border-radius: 20px; overflow: hidden; background: var(--card); border: 1px solid var(--border); cursor: pointer; position: relative; transition: 0.3s; }
+        .img-large { width: 100%; height: 140px; object-fit: cover; filter: brightness(0.8); }
+        .game-info { position: absolute; bottom: 0; padding: 12px; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.8)); }
+        .game-info h3 { color: #ffffff; font-size: 0.9rem; text-align: center; font-weight: 800; }
+
+        .cat-scroll { display: flex; gap: 10px; overflow-x: auto; padding: 5px 0 20px; scrollbar-width: none; }
+        .cat-btn { background: var(--glass); border: 1px solid var(--border); color: var(--text-muted); padding: 10px 22px; border-radius: 50px; white-space: nowrap; font-size: 0.75rem; font-weight: 800; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .cat-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        .offer-box { 
+            background: #1a1d26; 
+            border: 1px solid var(--border); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            display: flex; 
+            flex-direction: column; 
+            transition: 0.3s; 
+        }
+        .offer-img { 
+            width: 100%; 
+            height: 110px; 
+            object-fit: cover; 
+            filter: brightness(0.9);
+            border-bottom: 1px solid var(--border);
+        }
+        .offer-body { 
+            padding: 12px; 
+            text-align: center; 
+        }
+        .offer-name { 
+            font-size: 0.85rem; 
+            color: #cbd5e1; 
+            margin-bottom: 5px; 
+            font-weight: 600; 
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .offer-price { 
+            font-size: 1.1rem; 
+            color: #00f5ff; 
+            font-weight: 800; 
+            margin-bottom: 12px; 
+        }
+        .offer-controls { 
+            display: grid; 
+            grid-template-columns: 1fr 1.5fr; 
+            gap: 8px; 
+            padding: 0 10px 15px; 
+        }
+        .qty-box { 
+            background: #242933; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-around; 
+            color: white; 
+            font-weight: 800; 
+            font-size: 0.8rem; 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .btn-add-offer { 
+            background: #3f4451; 
+            color: white; 
+            border: none; 
+            padding: 10px; 
+            border-radius: 8px; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            font-size: 0.65rem; 
+            cursor: pointer; 
+        }
+
+        .btn-main { width: 100%; padding: 18px; border-radius: 18px; border: none; font-weight: 800; text-transform: uppercase; cursor: pointer; background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: white; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 245, 255, 0.3); }
+        input { width: 100%; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); margin-bottom: 12px; outline: none; font-family: inherit; font-size: 1rem; }
+        
+        #floating-cart { position: fixed; bottom: 30px; right: 20px; width: 65px; height: 65px; border-radius: 50%; background: var(--accent); display: none; align-items: center; justify-content: center; z-index: 2000; box-shadow: 0 10px 25px rgba(0, 245, 255, 0.4); border: 4px solid var(--bg); cursor: pointer; }
+        .cart-count { position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; border: 2px solid var(--bg); }
+        
+        #toast { position: fixed; top: 25px; left: 50%; transform: translateX(-50%) translateY(-40px); padding: 14px 28px; border-radius: 50px; z-index: 10000; background: #1a1a1a; color: #fff; border: 1px solid var(--accent); font-weight: 600; opacity: 0; transition: 0.4s; pointer-events: none; }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        .status-badge { padding: 5px 12px; border-radius: 8px; font-size: 0.7rem; font-weight: 800; float: right; }
+        .st-en-cours { background: rgba(255, 121, 0, 0.15); color: var(--orange); }
+        .st-termine { background: rgba(0, 255, 153, 0.15); color: var(--success); }
+        .st-rejete { background: rgba(255, 59, 92, 0.15); color: var(--danger); }
+        
+        .info-section { margin-top: 50px; padding: 0 5%; }
+        .info-card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 20px; }
+        .info-card h3 { color: var(--accent); font-size: 1.1rem; margin-bottom: 15px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .info-card p, .info-card li { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 8px; list-style: none; }
+        .info-card b { color: var(--text); }
+        .info-card .step { background: var(--accent); color: #000; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 0.7rem; font-weight: 800; margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+<div id="toast">Chargement...</div>
+
+<header>
+    <div style="display:flex; align-items:center; gap:12px; cursor:pointer;" onclick="resetToHome()">
+        <img src="logo.png" style="width:42px; height:42px; border-radius:50%; object-fit: cover; border: 2px solid var(--accent);">
+        <h1 style="font-size: 1.2rem; font-weight: 800; color: var(--text);">TOPUP<span style="color:var(--accent)">MADA</span></h1>
+    </div>
+    <div style="display:flex; gap:18px; align-items:center;">
+        <span onclick="toggleTheme()" id="theme-icon" style="cursor:pointer; font-size:1.3rem;">🌙</span>
+        <div style="position:relative; cursor:pointer;" onclick="showHistory()">
+            <span style="font-size: 1.4rem;">🕒</span>
+            <div id="notif-dot" style="position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bg); display: none; background: var(--orange); animation: pulse-notif 1.5s infinite;"></div>
+        </div>
+    </div>
+</header>
+
+<div id="win-home" class="window win-active">
+    <div style="margin-bottom: 20px;">
+        <input type="text" id="gameSearch" placeholder="Rechercher un jeu..." oninput="filterGames()" style="margin-bottom: 8px;">
+        <div id="admin-status" style="text-align: center; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.5px; opacity: 0.8;"></div>
+    </div>
+    <div style="text-align:center; padding-bottom: 30px;">
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">BOUTIQUE GAMING</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">⚡ Livraison Directe à Madagascar</p>
+    </div>
+    <div id="game-list" class="game-grid"></div>
+</div>
+
+<div id="win-shop" class="window">
+    <button onclick="resetToHome()" style="background:var(--glass); padding: 10px 20px; border-radius: 12px; border:1px solid var(--border); color:var(--text); margin-bottom:20px; font-weight:800; font-size:0.7rem;">← RETOUR ACCUEIL</button>
+    <h2 id="shop-title" style="font-size: 2.2rem; font-weight: 800; margin-bottom: 10px;"></h2>
+    <div id="cat-nav" class="cat-scroll"></div>
+    <div id="shop-list"></div>
+</div>
+
+<div id="win-cart" class="window">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 25px;">VOTRE PANIER</h2>
+    <div id="cart-items"></div>
+    <div style="background:var(--card); padding:30px; border-radius:24px; text-align:center; margin:30px 0; border:1px solid var(--border);">
+        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:5px;">Total de la commande</p>
+        <h1 id="cart-total" style="color:var(--accent); font-size:3rem; font-weight: 800;">0 Ar</h1>
+    </div>
+    <button class="btn-main" onclick="navigate('win-pay')">CONTINUER LE PAIEMENT</button>
+</div>
+
+<div id="win-pay" class="window">
+    <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 25px;">INFOS DE LIVRAISON</h2>
+    <div id="id-fields-area"></div>
+    <label style="color:var(--accent-2); font-size:0.7rem; font-weight:800; margin-left: 5px; margin-bottom: 5px; display: block;">PSEUDO EN JEU</label>
+    <input type="text" id="pUser" placeholder="Ex: Sniper_MG">
+    <label style="color:var(--accent-2); font-size:0.7rem; font-weight:800; margin-left: 5px; margin-bottom: 5px; display: block;">NUMÉRO DE TÉLÉPHONE</label>
+    <input type="tel" id="pPhone" placeholder="03X XX XXX XX">
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top:20px;">
+        <button class="btn-main" style="background:var(--orange); font-size: 0.7rem;" onclick="checkAndPay('Orange')">ORANGE</button>
+        <button class="btn-main" style="background:var(--success); color:#000; font-size: 0.7rem;" onclick="checkAndPay('Mvola')">MVOLA</button>
+        <button class="btn-main" style="background:var(--danger); font-size: 0.7rem;" onclick="checkAndPay('Airtel')">AIRTEL</button>
+    </div>
+</div>
+
+<div id="win-confirm" class="window">
+    <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text); margin-bottom: 15px;">PAIEMENT</h2>
+    <div id="guide-content" style="background: var(--glass); border-left: 4px solid var(--accent); padding: 15px; border-radius: 12px; margin-bottom: 15px; font-size: 0.9rem; color:var(--text);"></div>
+    <div style="background:var(--card); padding:25px; border-radius:24px; border:1px solid var(--border); text-align:center; margin-bottom:25px;">
+        <p style="font-size:0.8rem; color:var(--text-muted);">Transfert Mobile Money vers :</p>
+        <div id="pay-num" style="font-size:2rem; font-weight:800; color:var(--accent); margin:10px 0;"></div>
+        <p style="font-weight: 800; color: var(--text);">HAINGO MICHEL</p>
+    </div>
+    <button class="btn-main" id="ussd-btn" style="background:#fff; color:#000; border:1px solid #ddd; margin-bottom:25px; box-shadow:none;">⚡ LANCER L'APPEL USSD</button>
+    <label style="color: var(--orange); font-weight:800; font-size:0.75rem;">RÉFÉRENCE SMS DU TRANSFERT</label>
+    <input type="text" id="pay-ref" placeholder="Ex: 1234567890">
+    <div id="sending-zone" style="display:none; text-align:center;">
+        <p style="font-weight: 800; color: var(--accent);">Validation...</p>
+    </div>
+    <button class="btn-main" id="btn-final-send" onclick="sendOrder()">VALIDER MON ACHAT</button>
+</div>
+
+<div id="win-success" class="window">
+    <div style="text-align:center; padding-top:60px;">
+        <div style="width:100px; height:100px; background:var(--success); color:#000; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:3rem; margin:0 auto 30px;">✓</div>
+        <h2 style="font-size: 2rem; font-weight: 800; color: var(--text);">BIEN REÇU !</h2>
+        <div id="order-ref-display" style="background: var(--glass); padding: 15px; border-radius: 12px; font-family: monospace; color: var(--accent); font-weight: 800; margin: 30px 0; font-size:1.2rem;"></div>
+        <button class="btn-main" onclick="showHistory()">VOIR MES COMMANDES</button>
+    </div>
+</div>
+
+<div id="win-history" class="window">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h2 style="font-size: 1.8rem; font-weight: 800; color: var(--text);">MON HISTORIQUE</h2>
+        <span onclick="clearHistory()" style="color: var(--danger); font-size: 0.7rem; font-weight: 800; cursor: pointer; padding: 8px 12px; background: rgba(255, 59, 92, 0.1); border-radius: 10px;">EFFACER</span>
+    </div>
+    <div id="hist-content"></div>
+    <button class="btn-main" style="margin-top:30px; background:var(--glass); color: var(--text); border: 1px solid var(--border); box-shadow:none;" onclick="resetToHome()">RETOUR STORE</button>
+</div>
+
+<div class="info-section">
+    <div class="info-card">
+        <h3>⚡ Instructions de Recharge</h3>
+        <ul>
+            <li><span class="step">1</span> <b>Trouver votre Player ID :</b> Dans le lobby du jeu, cliquez sur votre avatar. Votre ID se trouve juste au-dessus de votre pseudo. Copiez-le.</li>
+            <li><span class="step">2</span> <b>Sélectionner le montant :</b> Choisissez le pack désiré. Assurez-vous d'avoir saisi le bon Player ID.</li>
+            <li><span class="step">3</span> <b>Confirmation :</b> Les monnaies seront créditées directement sur votre compte 5min après validation.</li>
+        </ul>
+    </div>
+    <div class="info-card">
+        <h3>🛡️ Sécurité & Aide</h3>
+        <p><b>Conseils de Sécurité :</b> Votre Player ID est suffisant. Aucun mot de passe requis. Attention aux arnaques proposant des monnaies gratuites sur d'autres sites.</p>
+        <p><b>Q: Puis-je recharger pour un ami ?</b><br>R: Oui, il suffit d'avoir son Player ID.</p>
+        <p><b>Q: Les bonus s'appliquent-ils ?</b><br>R: Non, nos recharges sont des standards, sauf indication contraire explicite.</p>
+        <p style="color:var(--danger); font-weight:800; font-size:0.7rem; margin-top:10px;">⚠️ Vérification Requise : Assurez-vous toujours de fournir le bon ID Joueur. Les erreurs ne peuvent pas être remboursées.</p>
+    </div>
+</div>
+
+<div id="floating-cart" onclick="openCart()">
+    <span style="font-size:1.8rem;">🛒</span>
+    <div id="cart-count" class="cart-count">0</div>
+</div>
+
+<footer style="text-align:center; padding:40px 20px; font-size:0.65rem; opacity:0.6; font-weight:800; letter-spacing:1px; color:var(--text); line-height:1.8;">
+    TOP UP MADA © 2026 • ITADORI GAMING STORE<br>
+</footer>
+
+<script>
+    const firebaseConfig = { 
+        apiKey: "AIzaSyAv8hKgEoreyhUTtZAA3aLDU8CjElvTvAI", 
+        authDomain: "topupmada-1ecbc.firebaseapp.com", 
+        projectId: "topupmada-1ecbc", 
+        storageBucket: "topupmada-1ecbc.firebasestorage.app", 
+        messagingSenderId: "309731360708", 
+        appId: "1:309731360708:web:4123300dec39ad3bf8ae91" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let clientID = localStorage.getItem('mada_client_id') || 'id_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('mada_client_id', clientID);
+
+    const gameMeta = {
+        ff: { name: "FREE FIRE", img: "ff.jpg" },
+        pubg: { name: "PUBG MOBILE", img: "pubg.jpg" },
+        ml: { name: "MOBILE LEGENDS", img: "mlbb.jpg" },
+        bs: { name: "BLOOD STRIKE", img: "bs.jpg" },
+        mc: { name: "MAGIC CHESS: GO GO", img: "mc.webp" },
+        hok: { name: "HONOR OF KINGS", img: "hok.jpg" },
+        genshin: { name: "GENSHIN IMPACT", img: "genshin.png" },
+        hsr: { name: "HONKAI: STAR RAIL", img: "hsr.png" },
+        wuwa: { name: "WUTHERING WAVES", img: "wuwa.png" },
+        ab: { name: "ARENA BREAKOUT", img: "arena.jpg" }
+    };
+
+    let cart = []; let total = 0; let currentGameKey = ""; let activeCat = "";
+    let remoteOffers = []; 
+
+    function checkAdminTime() {
+        const hrs = new Date().getHours(); const el = document.getElementById('admin-status');
+        if(hrs >= 8 && hrs < 21) el.innerHTML = `<span style="color:var(--success)">● ADMIN EN LIGNE</span> • 7J/7`;
+        else el.innerHTML = `<span style="color:var(--danger)">● ADMIN HORS LIGNE</span> • Reprise à 08h`;
+    }
+
+    function renderHome(filteredKeys) {
+        const list = document.getElementById('game-list');
+        const keys = filteredKeys || Object.keys(gameMeta);
+        list.innerHTML = keys.map(k => `
+            <div class="game-card" onclick="openShop('${k}')">
+                <img src="${gameMeta[k].img}" class="img-large">
+                <div class="game-info"><h3>${gameMeta[k].name}</h3></div>
+            </div>`).join('');
+    }
+
+    function filterGames() {
+        const q = document.getElementById('gameSearch').value.toLowerCase();
+        const filtered = Object.keys(gameMeta).filter(k => gameMeta[k].name.toLowerCase().includes(q));
+        renderHome(q === "" ? null : filtered);
+    }
+
+    async function openShop(k) {
+        currentGameKey = k;
+        notify("Chargement du catalogue...");
+        
+        const snap = await db.collection("games_data").get();
+        const gameDoc = snap.docs.find(d => d.id.includes(k));
+        
+        if (!gameDoc) return notify("Catalogue indisponible", true);
+        
+        const data = gameDoc.data();
+        remoteOffers = data.offers;
+        
+        document.body.style.backgroundImage = `url('${gameMeta[k].img}')`;
+        document.getElementById('shop-title').innerText = data.name;
+        
+        const cats = [...new Set(remoteOffers.map(o => o.cat))];
+        activeCat = cats[0];
+        document.getElementById('cat-nav').innerHTML = cats.map(c => `<button class="cat-btn ${c === activeCat ? 'active' : ''}" onclick="filterCat('${c}')">${c}</button>`).join('');
+        
+        renderOffers(); 
+        navigate('win-shop');
+    }
+
+    function filterCat(c) {
+        activeCat = c;
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.innerText === c));
+        renderOffers();
+    }
+
+    function renderOffers() {
+        const filtered = remoteOffers.filter(o => o.cat === activeCat);
+        const gameImg = gameMeta[currentGameKey].img;
+
+        document.getElementById('shop-list').innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                ${filtered.map(o => `
+                    <div class="offer-box" style="opacity: ${o.stock ? '1' : '0.6'}">
+                        <img src="${gameImg}" class="offer-img">
+                        <div class="offer-body">
+                            <div class="offer-name">${o.name}</div>
+                            <div class="offer-price">${o.price.toLocaleString()} MGA</div>
+                        </div>
+                        <div class="offer-controls">
+                            <div class="qty-box">1</div>
+                            <button class="btn-add-offer" 
+                                    style="${o.stock ? '' : 'background:#666; cursor:not-allowed;'}" 
+                                    onclick="${o.stock ? `addToCart('${o.name}', ${o.price}, '${o.cat}')` : ''}">
+                                ${o.stock ? 'AJOUTER' : 'ÉPUISÉ'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+    }
+
+    function addToCart(name, price, cat) {
+        if (cat === "💠 LEVEL UP" && cart.some(i => i.cat === "💠 LEVEL UP")) return notify("⚠️ Déjà ajouté", true);
+        cart.push({name, price, cat}); 
+        updateCartUI(); 
+        notify("🛒 Ajouté !");
+    }
+
+    function updateCartUI() {
+        const cBtn = document.getElementById('floating-cart');
+        document.getElementById('cart-count').innerText = cart.length;
+        if(cart.length > 0 && (document.getElementById('win-shop').style.display === 'block' || document.getElementById('win-home').style.display === 'block')) {
+            cBtn.style.display = 'flex';
+        } else {
+            cBtn.style.display = 'none';
+        }
+    }
+
+    function navigate(id) {
+        document.querySelectorAll('.window').forEach(w => { w.classList.remove('win-active'); w.style.display = 'none'; });
+        const n = document.getElementById(id); n.style.display = 'block';
+        if(id === 'win-pay') renderIDFields();
+        setTimeout(() => { n.classList.add('win-active'); updateCartUI(); }, 50);
+        window.scrollTo(0,0);
+    }
+
+    function renderIDFields() {
+        const area = document.getElementById('id-fields-area');
+        const needsZone = ['ml', 'mc', 'genshin', 'hsr', 'wuwa'];
+        if(needsZone.includes(currentGameKey)) {
+            let zp = "Ex: 6021";
+            if(['genshin', 'hsr', 'wuwa'].includes(currentGameKey)) zp = "Ex: Europe / Asia";
+            area.innerHTML = `
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                    <div style="flex: 2;">
+                        <label style="color:var(--accent-2); font-size:0.7rem; font-weight:800; margin-left:5px; margin-bottom:5px; display:block;">ID JOUEUR / UID</label>
+                        <input type="text" id="pID" placeholder="Entrez l'UID">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="color:var(--accent-2); font-size:0.7rem; font-weight:800; margin-left:5px; margin-bottom:5px; display:block;">SERVEUR / ZONE</label>
+                        <input type="text" id="pZone" placeholder="${zp}">
+                    </div>
+                </div>`;
+        } else {
+            area.innerHTML = `
+                <label style="color:var(--accent-2); font-size:0.7rem; font-weight:800; margin-left:5px; margin-bottom:5px; display:block;">ID JOUEUR / UID</label>
+                <input type="text" id="pID" placeholder="ID ${gameMeta[currentGameKey].name}">`;
+        }
+    }
+
+    function openCart() {
+        total = 0;
+        document.getElementById('cart-items').innerHTML = cart.map((i, idx) => {
+            total += i.price;
+            return `<div style="background:var(--card); padding:18px; border-radius:16px; margin-bottom:12px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <div><b style="color:var(--text); font-size:0.9rem;">${i.name}</b><br><small style="color:var(--accent); font-weight:800;">${i.price.toLocaleString()} Ar</small></div>
+                <span onclick="removeFromCart(${idx})" style="color:var(--danger); cursor:pointer; font-weight:800; padding:10px;">✕</span>
+            </div>`;
+        }).join('');
+        document.getElementById('cart-total').innerText = total.toLocaleString() + " Ar";
+        navigate('win-cart');
+    }
+
+    function removeFromCart(idx) { cart.splice(idx, 1); cart.length === 0 ? resetToHome() : openCart(); }
+
+    function checkAndPay(op) {
+        const uid = document.getElementById('pID').value.trim();
+        const pseudo = document.getElementById('pUser').value.trim();
+        const phone = document.getElementById('pPhone').value.trim().replace(/\s/g, "");
+        if(!uid || !pseudo || !phone) return notify("❌ Champs vides", true);
+        if(!/^(032|033|034|037|038)\d{7}$/.test(phone)) return notify("❌ Numéro invalide", true);
+        let num = op === 'Orange' ? '0376534718' : (op === 'Mvola' ? '0346779415' : '0338006872');
+        let ussd = op === 'Orange' ? `tel:%23144*1*1*${num}*${num}*${total}*1%23` : (op === 'Mvola' ? `tel:*111*1*2*1*${num}*${total}*1*0%23` : `tel:*436*2*1*${num}*${total}%23`);
+        document.getElementById('pay-num').innerText = num;
+        document.getElementById('guide-content').innerHTML = `Transférez <b>${total.toLocaleString()} Ar</b> vers le numéro ci-dessous (${op}).`;
+        document.getElementById('ussd-btn').onclick = () => window.location.href = ussd;
+        navigate('win-confirm');
+    }
+
+    async function sendOrder() {
+        const ref = document.getElementById('pay-ref').value.trim();
+        if(ref.length < 6) return notify("⚠️ Réf. SMS trop courte", true);
+        document.getElementById('btn-final-send').style.display = 'none';
+        document.getElementById('sending-zone').style.display = 'block';
+        const orderID = 'TUM-' + Math.floor(1000 + Math.random() * 9000);
+        await db.collection("orders").add({
+            orderID, clientID, game: gameMeta[currentGameKey].name, items: cart.map(i => i.name).join(', '),
+            total: total + " Ar", uid: document.getElementById('pID').value + (document.getElementById('pZone')?.value ? " ("+document.getElementById('pZone').value+")" : ""),
+            pseudo: document.getElementById('pUser').value, phone: document.getElementById('pPhone').value, refSMS: ref, status: 'EN COURS', date: new Date().toLocaleString(), timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('order-ref-display').innerText = `ID COMMANDE : ${orderID}`;
+        navigate('win-success');
+    }
+
+    async function showHistory() {
+        const content = document.getElementById('hist-content');
+        content.innerHTML = `<p style="text-align:center; opacity:0.5; padding:20px;">Chargement...</p>`; 
+        navigate('win-history');
+        const snap = await db.collection("orders").where("clientID", "==", clientID).get();
+        if (snap.empty) { content.innerHTML = `<div style="text-align:center; padding:40px; opacity:0.5;">🕒 Aucun historique.</div>`; return; }
+        const docs = snap.docs.sort((a, b) => b.data().timestamp - a.data().timestamp);
+        content.innerHTML = docs.map(doc => {
+            const i = doc.data();
+            const stClass = i.status === 'TERMINÉ' ? 'st-termine' : (i.status === 'REJETÉ' ? 'st-rejete' : 'st-en-cours');
+            return `<div style="background:var(--card); padding:18px; border-radius:20px; margin-bottom:15px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <span style="font-size:0.7rem; color:var(--accent); font-weight:800;">#${i.orderID}</span>
+                    <span class="status-badge ${stClass}">${i.status}</span>
+                </div>
+                <b>${i.game}</b><br><small>${i.items}</small><br>
+                <div style="margin-top:10px; font-size:0.8rem;"><b>Prix:</b> ${i.total} | <b>Ref:</b> ${i.refSMS}</div>
+            </div>`;
+        }).join('');
+    }
+
+    function clearHistory() { if(confirm("Effacer l'historique ?")) { db.collection("orders").where("clientID", "==", clientID).get().then(s => s.forEach(d => d.ref.delete())); showHistory(); } }
+
+    function resetToHome() { cart = []; updateCartUI(); document.body.style.backgroundImage = "url('plan.jpg')"; navigate('win-home'); renderHome(); }
+
+    function toggleTheme() { 
+        const h = document.documentElement; const nt = h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        h.setAttribute('data-theme', nt); document.getElementById('theme-icon').innerText = nt === 'dark' ? '🌙' : '☀️';
+    }
+
+    function notify(m, e) { 
+        const t = document.getElementById('toast'); t.innerText = m; 
+        t.style.borderColor = e ? 'var(--danger)' : 'var(--accent)'; 
+        t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); 
+    }
+    
+    window.onload = () => { renderHome(); checkAdminTime(); };
+</script>
+</body>
+</html>
